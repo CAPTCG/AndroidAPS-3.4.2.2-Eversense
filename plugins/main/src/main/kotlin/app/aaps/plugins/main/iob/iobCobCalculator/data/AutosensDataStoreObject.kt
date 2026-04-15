@@ -4,6 +4,7 @@ import androidx.collection.LongSparseArray
 import androidx.collection.size
 import app.aaps.core.data.iob.InMemoryGlucoseValue
 import app.aaps.core.data.model.GV
+import app.aaps.core.data.model.SourceSensor
 import app.aaps.core.data.time.T
 import app.aaps.core.interfaces.aps.AutosensData
 import app.aaps.core.interfaces.aps.AutosensDataStore
@@ -170,10 +171,20 @@ class AutosensDataStoreObject : AutosensDataStore {
             if (bgReadings.size < 3) return true
 
             var totalDiff: Long = 0
+            var checkedPairs = 0
             for (i in 1 until bgReadings.size) {
                 val bgTime = bgReadings[i].timestamp
                 val lastBgTime = bgReadings[i - 1].timestamp
-                var diff = lastBgTime - bgTime
+                val rawDiff = lastBgTime - bgTime
+                // Eversense requires charging every 48h, creating gaps that are not multiples of
+                // 5 minutes. Skip these gaps so they don't trigger the recalculation warning.
+                val isEversense = bgReadings[i].sourceSensor == SourceSensor.EVERSENSE_365
+                    || bgReadings[i].sourceSensor == SourceSensor.EVERSENSE_E3
+                    || bgReadings[i - 1].sourceSensor == SourceSensor.EVERSENSE_365
+                    || bgReadings[i - 1].sourceSensor == SourceSensor.EVERSENSE_E3
+                if (isEversense && rawDiff > T.mins(6).msecs()) continue
+                checkedPairs++
+                var diff = rawDiff
                 diff %= T.mins(5).msecs()
                 if (diff > T.mins(2).plus(T.secs(30)).msecs()) diff -= T.mins(5).msecs()
                 totalDiff += diff
@@ -183,7 +194,8 @@ class AutosensDataStoreObject : AutosensDataStore {
                     return false
                 }
             }
-            val averageDiff = totalDiff / bgReadings.size / 1000
+            if (checkedPairs == 0) return true
+            val averageDiff = totalDiff / checkedPairs / 1000
             val is5minData = averageDiff < 1
             aapsLogger.debug(LTag.AUTOSENS, "Interval detection: values: ${bgReadings.size} averageDiff: $averageDiff[s] is5minData: $is5minData")
             return is5minData
