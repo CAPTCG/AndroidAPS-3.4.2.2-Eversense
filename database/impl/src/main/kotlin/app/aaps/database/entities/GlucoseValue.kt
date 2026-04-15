@@ -94,6 +94,8 @@ data class GlucoseValue(
         INTELLIGO_NATIVE,
         MM_600_SERIES,
         EVERSENSE,
+        EVERSENSE_E3,
+        EVERSENSE_365,
         AIDEX,
         RANDOM,
         UNKNOWN,
