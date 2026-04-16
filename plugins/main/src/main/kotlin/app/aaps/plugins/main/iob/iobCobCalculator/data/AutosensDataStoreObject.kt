@@ -178,10 +178,12 @@ class AutosensDataStoreObject : AutosensDataStore {
                 val rawDiff = lastBgTime - bgTime
                 // Eversense requires charging every 48h, creating gaps that are not multiples of
                 // 5 minutes. Skip these gaps so they don't trigger the recalculation warning.
-                val isEversense = bgReadings[i].sourceSensor == SourceSensor.EVERSENSE_365
+                val isEversense = bgReadings[i].sourceSensor == SourceSensor.EVERSENSE
                     || bgReadings[i].sourceSensor == SourceSensor.EVERSENSE_E3
-                    || bgReadings[i - 1].sourceSensor == SourceSensor.EVERSENSE_365
+                    || bgReadings[i].sourceSensor == SourceSensor.EVERSENSE_365
+                    || bgReadings[i - 1].sourceSensor == SourceSensor.EVERSENSE
                     || bgReadings[i - 1].sourceSensor == SourceSensor.EVERSENSE_E3
+                    || bgReadings[i - 1].sourceSensor == SourceSensor.EVERSENSE_365
                 if (isEversense && rawDiff > T.mins(6).msecs()) continue
                 checkedPairs++
                 var diff = rawDiff
